@@ -7,7 +7,7 @@ const Participants: React.FC = () => {
 
   useEffect(() => {
     // Traemos la lista de participantes desde el backend
-    axios.get('http://localhost:5000/api/participants')
+    axios.get('http://localhost:5001/api/participants')
       .then((response) => {
         setParticipants(response.data);
       });

@@ -1,0 +1,31 @@
+tags:
+  - Auth
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required:
+        - user
+        - password
+      properties:
+        user:
+          type: string
+          example: sergio
+        password:
+          type: string
+          example: sergio
+responses:
+  200:
+    description: Login exitoso
+    schema:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          example: Login exitoso
+        user:
+          type: object
+  401:
+    description: Credenciales incorrectas

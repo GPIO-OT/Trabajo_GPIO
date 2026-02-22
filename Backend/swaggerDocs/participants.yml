@@ -1,0 +1,19 @@
+tags:
+  - Contestants
+responses:
+  200:
+    description: Lista de concursantes
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            example: 1
+          name:
+            type: string
+            example: cantante1
+          votes:
+            type: integer
+            example: 0

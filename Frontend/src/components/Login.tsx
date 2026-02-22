@@ -1,17 +1,22 @@
 // src/components/Login.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Cambiar useHistory por useNavigate
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate(); // Usar useNavigate
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // En un caso real, aquí iría la validación de las credenciales con el backend.
-    localStorage.setItem('loggedIn', 'true'); // Simula un login
-    navigate('/vote'); // Redirige a la página de votación
+    try {
+      await axios.post('http://localhost:5001/api/login', { user: username, password });
+      navigate('/vote');
+    } catch {
+      setError('Usuario o contraseña incorrectos');
+    }
   };
 
   return (
@@ -32,6 +37,7 @@ const Login: React.FC = () => {
         />
         <button type="submit">Login</button>
       </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );
 };

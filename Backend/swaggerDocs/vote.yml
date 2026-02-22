@@ -1,0 +1,25 @@
+tags:
+  - Contestants
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required:
+        - participantId
+      properties:
+        participantId:
+          type: integer
+          example: 1
+responses:
+  200:
+    description: Voto registrado
+    schema:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          example: Voto registrado
+  404:
+    description: Concursante no encontrado

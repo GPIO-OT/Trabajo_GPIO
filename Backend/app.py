@@ -3,7 +3,7 @@ import os
 from db import db
 from Models.Users import User
 from Models.Contestant import Contestant
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flasgger import Swagger, swag_from
 from swagger_config import swagger_config
 from swagger_template import swagger_template
@@ -60,6 +60,36 @@ def conexion():
         return jsonify({"Mensaje": "Hola mundo"}), 200
     except Exception as e:
         return jsonify({"mensaje": "Error al conectarse al endpoint", "error": str(e)}), 500
-    
+
+
+@app.route('/api/login', methods=['POST'])
+@swag_from('swaggerDocs/login.yml')
+def login():
+    data = request.get_json()
+    user = User.query.filter_by(user=data['user'], password=data['password']).first()
+    if not user:
+        return jsonify({"mensaje": "Credenciales incorrectas"}), 401
+    return jsonify({"mensaje": "Login exitoso", "user": user.to_dict()}), 200
+
+
+@app.route('/api/participants', methods=['GET'])
+@swag_from('swaggerDocs/participants.yml')
+def get_participants():
+    contestants = Contestant.query.all()
+    return jsonify([c.to_dict() for c in contestants]), 200
+
+
+@app.route('/api/vote', methods=['POST'])
+@swag_from('swaggerDocs/vote.yml')
+def vote():
+    data = request.get_json()
+    contestant = Contestant.query.get(data['participantId'])
+    if not contestant:
+        return jsonify({"mensaje": "Concursante no encontrado"}), 404
+    contestant.votes += 1
+    db.session.commit()
+    return jsonify({"mensaje": "Voto registrado"}), 200
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5003)

@@ -7,7 +7,7 @@ const Results: React.FC = () => {
 
   useEffect(() => {
     // Traemos los resultados de la votación desde el backend
-    axios.get('http://localhost:5000/api/results')
+    axios.get('http://localhost:5001/api/results')
       .then((response) => {
         setResults(response.data);
       });
