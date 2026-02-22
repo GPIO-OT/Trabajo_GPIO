@@ -11,7 +11,7 @@ const Vote: React.FC = () => {
   useEffect(() => {
     // Aquí traemos los participantes desde el backend
     axios
-      .get("http://localhost:5000/api/participants") // Asegúrate de que el backend esté corriendo
+      .get("http://localhost:5001/api/participants") // Asegúrate de que el backend esté corriendo
       .then((response) => {
         setParticipants(response.data);
       });
@@ -21,7 +21,7 @@ const Vote: React.FC = () => {
     if (selectedVote !== null) {
       // Aquí se enviaría la votación al backend
       axios
-        .post("http://localhost:5000/api/vote", { participantId: selectedVote })
+        .post("http://localhost:5001/api/vote", { participantId: selectedVote })
         .then(() => {
           alert("Votación realizada");
         })
