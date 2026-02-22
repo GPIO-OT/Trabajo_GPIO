@@ -1,38 +1,18 @@
 services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5002:3000"
+    networks:
+      - app-network
+    depends_on:
+      - backend
   backend:
     build: ./Backend
     image: backend-image
     ports:
       - "5001:5000"
-    environment:
-      MYSQL_USER: root
-      MYSQL_PASSWORD: sergio2525
-      MYSQL_DATABASE: OT_BD
-      MYSQL_HOST: db
-    depends_on:
-      db:
-        condition: service_healthy
-
-  frontend:
-    build: ./Frontend
-    image: frontend-image
-    ports:
-      - "5002:5173"
-
-  db:
-    image: mysql:9.6.0
-    environment:
-      MYSQL_ROOT_PASSWORD: sergio2525
-      MYSQL_DATABASE: OT_BD
-    ports:
-      - 3307:3306
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-volumes:
-  mysql_data:
+networks:
+  app-network:
+    driver: bridge
