@@ -79,6 +79,13 @@ def get_participants():
     return jsonify([c.to_dict() for c in contestants]), 200
 
 
+@app.route('/api/results', methods=['GET'])
+@swag_from('swaggerDocs/results.yml')
+def get_results():
+    contestants = Contestant.query.all()
+    return jsonify([{"participantId": c.id, "votes": c.votes} for c in contestants]), 200
+
+
 @app.route('/api/vote', methods=['POST'])
 @swag_from('swaggerDocs/vote.yml')
 def vote():
