@@ -1,14 +1,17 @@
 // src/components/Vote.tsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 const Vote: React.FC = () => {
-  const [participants, setParticipants] = useState<{ id: number, name: string }[]>([]);
+  const [participants, setParticipants] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [selectedVote, setSelectedVote] = useState<number | null>(null);
 
   useEffect(() => {
     // Aquí traemos los participantes desde el backend
-    axios.get('http://localhost:5000/api/participants') // Asegúrate de que el backend esté corriendo
+    axios
+      .get("http://localhost:5000/api/participants") // Asegúrate de que el backend esté corriendo
       .then((response) => {
         setParticipants(response.data);
       });
@@ -17,12 +20,13 @@ const Vote: React.FC = () => {
   const handleVote = () => {
     if (selectedVote !== null) {
       // Aquí se enviaría la votación al backend
-      axios.post('http://localhost:5000/api/vote', { participantId: selectedVote })
+      axios
+        .post("http://localhost:5000/api/vote", { participantId: selectedVote })
         .then(() => {
-          alert('Votación realizada');
+          alert("Votación realizada");
         })
         .catch((error) => {
-          console.error('Error al votar:', error);
+          console.error("Error al votar:", error);
         });
     }
   };
