@@ -1,0 +1,36 @@
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  padding: 40px;
+  background: #f3f4f6;
+  margin-bottom: 40px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+}
+
+.main-button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.main-button:not(:disabled)hover {
+  background: #4338ca;
+}
+.main-button:disabled {
+  background: #4338ca;
+  cursor: not-allowed;
+}
+

@@ -1,0 +1,44 @@
+.card {
+  width: 280px;
+  height: 150px;
+  overflow: hidden;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.card.selected {
+  border: 2px solid #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+  transform: scale(1.03);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card h2 {
+  margin-bottom: 10px;
+}
+
+.card button:not(:disabled):hover {
+  background: #4338ca;
+}
+
+.card button:disabled {
+  background: #a5b4fc;
+  cursor: not-allowed;
+}
+
+.card button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
