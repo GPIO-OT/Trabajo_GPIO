@@ -5,6 +5,8 @@ from Models.Users import User
 from Models.Contestant import Contestant
 from flask import Flask, jsonify, request
 from flasgger import Swagger, swag_from
+from marshmallow import ValidationError
+from schemas import LoginSchema, VoteSchema
 from swagger_config import swagger_config
 from swagger_template import swagger_template
 from flask_cors import CORS
@@ -65,7 +67,10 @@ def conexion():
 @app.route('/api/login', methods=['POST'])
 @swag_from('swaggerDocs/login.yml')
 def login():
-    data = request.get_json()
+    try:
+        data = LoginSchema().load(request.get_json() or {})
+    except ValidationError as e:
+        return jsonify({"mensaje": "Datos inválidos", "errores": e.messages}), 400
     user = User.query.filter_by(user=data['user'], password=data['password']).first()
     if not user:
         return jsonify({"mensaje": "Credenciales incorrectas"}), 401
@@ -88,7 +93,10 @@ def get_results():
 @app.route('/api/vote', methods=['POST'])
 @swag_from('swaggerDocs/vote.yml')
 def vote():
-    data = request.get_json()
+    try:
+        data = VoteSchema().load(request.get_json() or {})
+    except ValidationError as e:
+        return jsonify({"mensaje": "Datos inválidos", "errores": e.messages}), 400
     contestant = Contestant.query.get(data['participantId'])
     if not contestant:
         return jsonify({"mensaje": "Concursante no encontrado"}), 404
