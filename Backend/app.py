@@ -12,12 +12,14 @@ from swagger_template import swagger_template
 from flask_cors import CORS
 
 app = Flask(__name__)
-db_user = os.getenv("MYSQL_USER", "root")
-db_password = os.getenv("MYSQL_PASSWORD", "sergio2525")
-db_host = os.getenv("MYSQL_HOST", "localhost")
-db_name = os.getenv("MYSQL_DATABASE", "OT_BD")
-
-app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:3306/{db_name}"
+uri = os.getenv("SQLALCHEMY_DATABASE_URI")
+if not uri:
+    db_user = os.getenv("MYSQL_USER", "root")
+    db_password = os.getenv("MYSQL_PASSWORD", "sergio2525")
+    db_host = os.getenv("MYSQL_HOST", "localhost")
+    db_name = os.getenv("MYSQL_DATABASE", "OT_BD")
+    uri = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:3306/{db_name}"
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
