@@ -1,0 +1,28 @@
+# Python cache
+
+**pycache**/
+_.py[cod]
+_$py.class
+
+# Virtual environments
+
+.venv/
+venv/
+env/
+
+# Test and tooling caches
+
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local/test files not needed in runtime image
+
+test\_\*.py
+
+# VCS / OS
+
+.git/
+.gitignore
+.DS_Store
