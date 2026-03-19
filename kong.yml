@@ -7,3 +7,10 @@ services:
       - name: backend-route
         paths:
           - /api
+plugins:
+  - name: key-auth
+    service: backend-service
+
+  - name: file-log
+    config:
+      path: /dev/stdout
