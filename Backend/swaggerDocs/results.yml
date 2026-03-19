@@ -1,0 +1,16 @@
+tags:
+  - Contestants
+responses:
+  200:
+    description: Resultados de la votación
+    schema:
+      type: array
+      items:
+        type: object
+        properties:
+          participantId:
+            type: integer
+            example: 1
+          votes:
+            type: integer
+            example: 5
