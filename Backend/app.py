@@ -66,7 +66,7 @@ def conexion():
         return jsonify({"mensaje": "Error al conectarse al endpoint", "error": str(e)}), 500
 
 
-@app.route('/api/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 @swag_from('swaggerDocs/login.yml')
 def login():
     try:
@@ -79,20 +79,20 @@ def login():
     return jsonify({"mensaje": "Login exitoso", "user": user.to_dict()}), 200
 
 
-@app.route('/api/participants', methods=['GET'])
+@app.route('/participants', methods=['GET'])
 @swag_from('swaggerDocs/participants.yml')
 def get_participants():
     contestants = Contestant.query.all()
     return jsonify([c.to_dict() for c in contestants]), 200
 
 
-@app.route('/api/results', methods=['GET'])
+@app.route('/results', methods=['GET'])
 @swag_from('swaggerDocs/results.yml')
 def get_results():
     contestants = Contestant.query.all()
     return jsonify([{"participantId": c.id, "votes": c.votes} for c in contestants]), 200
 
-@app.route('/api/vote', methods=['POST'])
+@app.route('/vote', methods=['POST'])
 @swag_from('swaggerDocs/vote.yml')
 def vote():
     try:
