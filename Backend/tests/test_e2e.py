@@ -43,7 +43,9 @@ def test_complete_user_flow_login_to_vote(client):
     r = client.get("/api/results")
     assert r.status_code == 200
     results = r.get_json()
-    voted_result = next((res for res in results if res["participantId"] == first_participant_id), None)
+    voted_result = next(
+        (res for res in results if res["participantId"] == first_participant_id), None
+    )
     assert voted_result is not None
     assert voted_result["votes"] > 0
 
@@ -62,7 +64,9 @@ def test_multiple_users_voting_workflow(client):
     r = client.get("/api/results")
     assert r.status_code == 200
     results = r.get_json()
-    voted_result = next((res for res in results if res["participantId"] == participant_id), None)
+    voted_result = next(
+        (res for res in results if res["participantId"] == participant_id), None
+    )
     assert voted_result["votes"] >= len(users)
 
 
@@ -106,7 +110,9 @@ def test_multiple_rapid_votes_same_participant(client, app_context):
     with app.app_context():
         final_contestant = Contestant.query.get(participant_id)
         expected_votes = initial_votes + num_votes
-        assert final_contestant.votes == expected_votes, f"Expected {expected_votes} votes, got {final_contestant.votes}"
+        assert (
+            final_contestant.votes == expected_votes
+        ), f"Expected {expected_votes} votes, got {final_contestant.votes}"
 
 
 def test_invalid_login_then_valid_login_workflow(client):
@@ -213,7 +219,9 @@ def test_stress_rapid_sequential_votes(client):
 
     r = client.get("/api/results")
     results = r.get_json()
-    voted_result = next((res for res in results if res["participantId"] == participant_id), None)
+    voted_result = next(
+        (res for res in results if res["participantId"] == participant_id), None
+    )
     assert voted_result["votes"] >= num_rapid_votes
 
 
