@@ -64,9 +64,7 @@ def test_multiple_users_voting_workflow(client):
     r = client.get("/api/results")
     assert r.status_code == 200
     results = r.get_json()
-    voted_result = next(
-        (res for res in results if res["participantId"] == participant_id), None
-    )
+    voted_result = next((res for res in results if res["participantId"] == participant_id), None)
     assert voted_result["votes"] >= len(users)
 
 
@@ -219,9 +217,7 @@ def test_stress_rapid_sequential_votes(client):
 
     r = client.get("/api/results")
     results = r.get_json()
-    voted_result = next(
-        (res for res in results if res["participantId"] == participant_id), None
-    )
+    voted_result = next((res for res in results if res["participantId"] == participant_id), None)
     assert voted_result["votes"] >= num_rapid_votes
 
 
