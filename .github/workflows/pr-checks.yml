@@ -1,0 +1,46 @@
+name: PR Checks (Black + Unit Tests)
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        working-directory: Backend
+        run: |
+          pip install -r requirements.txt
+
+      - name: Check code formatting with Black
+        working-directory: Backend
+        run: |
+          black --check --diff .
+
+      - name: Run unit tests
+        working-directory: Backend
+        run: |
+          pytest tests/test_app.py -v
+
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.code-quality.result }}" == "failure" ]; then
+            echo "❌ PR checks failed. Please fix formatting or tests."
+            exit 1
+          else
+            echo "✅ All PR checks passed!"
+          fi
