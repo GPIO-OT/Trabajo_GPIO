@@ -4,9 +4,38 @@ services:
   - name: backend-service
     url: http://backend:5000
     routes:
+      - name: backend-route-participants
+        paths:
+          - /participants
+        strip_path: false
+        plugins:
+          - name: acl
+            config:
+              allow:
+                - frontend
       - name: backend-route
         paths:
-          - /api
+          - /
+        strip_path: false
+        plugins:
+          - name: acl
+            config:
+              allow:
+                - frontend
+                - testing
+
+consumers:
+  - username: cliente-web
+    keyauth_credentials:
+      - key: gpio-api-key-2026
+    acls:
+      - group: frontend
+  - username: cliente-test
+    keyauth_credentials:
+      - key: gpio-test-key-2026
+    acls:
+      - group: testing
+
 plugins:
   - name: key-auth
     service: backend-service
