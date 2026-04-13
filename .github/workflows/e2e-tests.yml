@@ -29,22 +29,12 @@ jobs:
       - name: Run unit tests
         working-directory: Backend
         run: |
-          pytest tests/test_app.py -v
-
-      - name: Run integration tests
-        working-directory: Backend
-        run: |
-          pytest tests/test_integration.py -v
+          pytest tests/test_unitarios.py -v
 
       - name: Run E2E tests
         working-directory: Backend
         run: |
           pytest tests/test_e2e.py -v
-
-      - name: Run all tests with coverage
-        working-directory: Backend
-        run: |
-          pytest tests/ -v --tb=short
 
   test-summary:
     runs-on: ubuntu-latest

@@ -29,7 +29,7 @@ jobs:
       - name: Run unit tests
         working-directory: Backend
         run: |
-          pytest tests/test_app.py -v
+          pytest tests/test_unitarios.py -v
 
   test-summary:
     runs-on: ubuntu-latest
