@@ -30,6 +30,10 @@ sudo docker compose up -d
 | Swagger  | http://localhost:5001/swagger/ |
 | Frontend | http://localhost:5002/         |
 
+## Integración continua
+
+Las Pull Requests ejecutan GitHub Actions para comprobar formato con Black y tests con Pytest.
+
 ## Consultar logs del Frontend y Backend
 
 ```bash
