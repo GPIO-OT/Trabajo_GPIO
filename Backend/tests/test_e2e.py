@@ -26,21 +26,21 @@ def app_context():
 
 
 def test_complete_user_flow_login_to_vote(client):
-    r = client.post("/api/login", json={"user": "sergio", "password": "sergio"})
+    r = client.post("/login", json={"user": "sergio", "password": "sergio"})
     assert r.status_code == 200
     assert r.get_json()["mensaje"] == "Login exitoso"
 
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     assert r.status_code == 200
     participants = r.get_json()
     assert len(participants) > 0
     first_participant_id = participants[0]["id"]
 
-    r = client.post("/api/vote", json={"participantId": first_participant_id})
+    r = client.post("/vote", json={"participantId": first_participant_id})
     assert r.status_code == 200
     assert r.get_json()["mensaje"] == "Voto registrado"
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     assert r.status_code == 200
     results = r.get_json()
     voted_result = next(
@@ -55,13 +55,13 @@ def test_multiple_users_voting_workflow(client):
     participant_id = 1
 
     for user in users:
-        r = client.post("/api/login", json={"user": user, "password": user})
+        r = client.post("/login", json={"user": user, "password": user})
         assert r.status_code == 200
 
-        r = client.post("/api/vote", json={"participantId": participant_id})
+        r = client.post("/vote", json={"participantId": participant_id})
         assert r.status_code == 200
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     assert r.status_code == 200
     results = r.get_json()
     voted_result = next((res for res in results if res["participantId"] == participant_id), None)
@@ -69,7 +69,7 @@ def test_multiple_users_voting_workflow(client):
 
 
 def test_voting_for_all_participants_and_verify_results(client, app_context):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     participants = r.get_json()
 
     votes_per_participant = {}
@@ -79,10 +79,10 @@ def test_voting_for_all_participants_and_verify_results(client, app_context):
         votes_per_participant[pid] = votes_count
 
         for _ in range(votes_count):
-            r = client.post("/api/vote", json={"participantId": pid})
+            r = client.post("/vote", json={"participantId": pid})
             assert r.status_code == 200
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     results = r.get_json()
 
     for result in results:
@@ -101,7 +101,7 @@ def test_multiple_rapid_votes_same_participant(client, app_context):
         initial_votes = initial_contestant.votes
 
     for _ in range(num_votes):
-        r = client.post("/api/vote", json={"participantId": participant_id})
+        r = client.post("/vote", json={"participantId": participant_id})
         assert r.status_code == 200
         assert r.get_json()["mensaje"] == "Voto registrado"
 
@@ -114,34 +114,34 @@ def test_multiple_rapid_votes_same_participant(client, app_context):
 
 
 def test_invalid_login_then_valid_login_workflow(client):
-    r = client.post("/api/login", json={"user": "invalid", "password": "wrong"})
+    r = client.post("/login", json={"user": "invalid", "password": "wrong"})
     assert r.status_code == 401
 
-    r = client.post("/api/login", json={"user": "sergio", "password": "sergio"})
+    r = client.post("/login", json={"user": "sergio", "password": "sergio"})
     assert r.status_code == 200
     assert r.get_json()["mensaje"] == "Login exitoso"
 
 
 def test_vote_invalid_then_valid_participant(client):
-    r = client.post("/api/vote", json={"participantId": 999})
+    r = client.post("/vote", json={"participantId": 999})
     assert r.status_code == 404
 
-    r = client.post("/api/vote", json={"participantId": 1})
+    r = client.post("/vote", json={"participantId": 1})
     assert r.status_code == 200
 
 
 def test_results_consistency_after_multiple_operations(client, app_context):
-    r = client.get("/api/results")
+    r = client.get("/results")
     initial_results = r.get_json()
     initial_total_votes = sum(res["votes"] for res in initial_results)
 
     votes_to_add = 15
     for i in range(votes_to_add):
         participant_id = (i % 4) + 1
-        r = client.post("/api/vote", json={"participantId": participant_id})
+        r = client.post("/vote", json={"participantId": participant_id})
         assert r.status_code == 200
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     final_results = r.get_json()
     final_total_votes = sum(res["votes"] for res in final_results)
 
@@ -151,8 +151,8 @@ def test_results_consistency_after_multiple_operations(client, app_context):
 def test_api_endpoints_availability(client):
     endpoints = [
         ("/", "GET"),
-        ("/api/participants", "GET"),
-        ("/api/results", "GET"),
+        ("/participants", "GET"),
+        ("/results", "GET"),
     ]
 
     for endpoint, method in endpoints:
@@ -162,34 +162,34 @@ def test_api_endpoints_availability(client):
 
 
 def test_edge_case_empty_json_payloads(client):
-    r = client.post("/api/login", json={})
+    r = client.post("/login", json={})
     assert r.status_code == 400
 
-    r = client.post("/api/vote", json={})
+    r = client.post("/vote", json={})
     assert r.status_code == 400
 
 
 def test_edge_case_malformed_json(client):
-    r = client.post("/api/login", data="not json", content_type="application/json")
+    r = client.post("/login", data="not json", content_type="application/json")
     assert r.status_code in [400, 500]
 
-    r = client.post("/api/vote", data="not json", content_type="application/json")
+    r = client.post("/vote", data="not json", content_type="application/json")
     assert r.status_code in [400, 500]
 
 
 def test_voting_boundary_values(client):
-    r = client.post("/api/vote", json={"participantId": 0})
+    r = client.post("/vote", json={"participantId": 0})
     assert r.status_code in [400, 404]
 
-    r = client.post("/api/vote", json={"participantId": -1})
+    r = client.post("/vote", json={"participantId": -1})
     assert r.status_code in [400, 404]
 
-    r = client.post("/api/vote", json={"participantId": 999999})
+    r = client.post("/vote", json={"participantId": 999999})
     assert r.status_code == 404
 
 
 def test_complete_voting_cycle_all_participants(client, app_context):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     participants = r.get_json()
 
     for participant in participants:
@@ -199,7 +199,7 @@ def test_complete_voting_cycle_all_participants(client, app_context):
             contestant = Contestant.query.get(pid)
             initial_votes = contestant.votes
 
-        r = client.post("/api/vote", json={"participantId": pid})
+        r = client.post("/vote", json={"participantId": pid})
         assert r.status_code == 200
 
         with app.app_context():
@@ -212,17 +212,17 @@ def test_stress_rapid_sequential_votes(client):
     num_rapid_votes = 50
 
     for _ in range(num_rapid_votes):
-        r = client.post("/api/vote", json={"participantId": participant_id})
+        r = client.post("/vote", json={"participantId": participant_id})
         assert r.status_code == 200
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     results = r.get_json()
     voted_result = next((res for res in results if res["participantId"] == participant_id), None)
     assert voted_result["votes"] >= num_rapid_votes
 
 
 def test_login_response_structure(client):
-    r = client.post("/api/login", json={"user": "sergio", "password": "sergio"})
+    r = client.post("/login", json={"user": "sergio", "password": "sergio"})
     assert r.status_code == 200
     data = r.get_json()
 
@@ -233,7 +233,7 @@ def test_login_response_structure(client):
 
 
 def test_participants_response_completeness(client):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     assert r.status_code == 200
     participants = r.get_json()
 
@@ -247,11 +247,11 @@ def test_participants_response_completeness(client):
 
 
 def test_results_match_participants(client):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     participants = r.get_json()
     participant_ids = {p["id"] for p in participants}
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     results = r.get_json()
     result_ids = {res["participantId"] for res in results}
 

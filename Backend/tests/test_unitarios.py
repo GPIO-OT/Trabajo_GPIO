@@ -23,23 +23,23 @@ def test_conexion(client):
 
 
 def test_login_exitoso(client):
-    r = client.post("/api/login", json={"user": "sergio", "password": "sergio"})
+    r = client.post("/login", json={"user": "sergio", "password": "sergio"})
     assert r.status_code == 200
     assert r.get_json()["mensaje"] == "Login exitoso"
 
 
 def test_login_credenciales_incorrectas(client):
-    r = client.post("/api/login", json={"user": "x", "password": "y"})
+    r = client.post("/login", json={"user": "x", "password": "y"})
     assert r.status_code == 401
 
 
 def test_login_datos_invalidos(client):
-    r = client.post("/api/login", json={})
+    r = client.post("/login", json={})
     assert r.status_code == 400
 
 
 def test_get_participants(client):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     assert r.status_code == 200
     data = r.get_json()
     assert len(data) == 4
@@ -47,7 +47,7 @@ def test_get_participants(client):
 
 
 def test_get_results(client):
-    r = client.get("/api/results")
+    r = client.get("/results")
     assert r.status_code == 200
     data = r.get_json()
     assert len(data) == 4
@@ -55,16 +55,16 @@ def test_get_results(client):
 
 
 def test_vote_ok(client):
-    r = client.post("/api/vote", json={"participantId": 1})
+    r = client.post("/vote", json={"participantId": 1})
     assert r.status_code == 200
     assert r.get_json()["mensaje"] == "Voto registrado"
 
 
 def test_vote_concursante_no_encontrado(client):
-    r = client.post("/api/vote", json={"participantId": 999})
+    r = client.post("/vote", json={"participantId": 999})
     assert r.status_code == 404
 
 
 def test_vote_datos_invalidos(client):
-    r = client.post("/api/vote", json={})
+    r = client.post("/vote", json={})
     assert r.status_code == 400

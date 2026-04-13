@@ -39,7 +39,7 @@ def test_user_authentication_persistence(client, app_context):
     assert user is not None
     assert user.password == "sergio"
 
-    r = client.post("/api/login", json={"user": "sergio", "password": "sergio"})
+    r = client.post("/login", json={"user": "sergio", "password": "sergio"})
     assert r.status_code == 200
     data = r.get_json()
     assert data["user"]["user"] == "sergio"
@@ -49,7 +49,7 @@ def test_vote_persistence_in_database(client, app_context):
     contestant = Contestant.query.get(1)
     initial_votes = contestant.votes
 
-    r = client.post("/api/vote", json={"participantId": 1})
+    r = client.post("/vote", json={"participantId": 1})
     assert r.status_code == 200
 
     contestant = Contestant.query.get(1)
@@ -61,7 +61,7 @@ def test_multiple_votes_increment_correctly(client, app_context):
     initial_votes = contestant.votes
 
     for _ in range(5):
-        r = client.post("/api/vote", json={"participantId": 2})
+        r = client.post("/vote", json={"participantId": 2})
         assert r.status_code == 200
 
     contestant = Contestant.query.get(2)
@@ -73,7 +73,7 @@ def test_results_reflect_database_state(client, app_context):
     contestant.votes = 42
     db.session.commit()
 
-    r = client.get("/api/results")
+    r = client.get("/results")
     assert r.status_code == 200
     data = r.get_json()
 
@@ -86,7 +86,7 @@ def test_all_users_can_authenticate(client):
     users = ["sergio", "ivan", "koldo", "jose"]
 
     for username in users:
-        r = client.post("/api/login", json={"user": username, "password": username})
+        r = client.post("/login", json={"user": username, "password": username})
         assert r.status_code == 200
         data = r.get_json()
         assert data["mensaje"] == "Login exitoso"
@@ -94,7 +94,7 @@ def test_all_users_can_authenticate(client):
 
 
 def test_participants_endpoint_returns_all_contestants(client):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     assert r.status_code == 200
     data = r.get_json()
 
@@ -111,7 +111,7 @@ def test_vote_for_all_contestants(client, app_context):
         contestant = Contestant.query.get(contestant_id)
         initial_votes = contestant.votes
 
-        r = client.post("/api/vote", json={"participantId": contestant_id})
+        r = client.post("/vote", json={"participantId": contestant_id})
         assert r.status_code == 200
 
         contestant = Contestant.query.get(contestant_id)
@@ -119,7 +119,7 @@ def test_vote_for_all_contestants(client, app_context):
 
 
 def test_login_validation_error_messages(client):
-    r = client.post("/api/login", json={"user": "sergio"})
+    r = client.post("/login", json={"user": "sergio"})
     assert r.status_code == 400
     data = r.get_json()
     assert "errores" in data
@@ -127,7 +127,7 @@ def test_login_validation_error_messages(client):
 
 
 def test_vote_validation_error_messages(client):
-    r = client.post("/api/vote", json={})
+    r = client.post("/vote", json={})
     assert r.status_code == 400
     data = r.get_json()
     assert "errores" in data
@@ -135,17 +135,17 @@ def test_vote_validation_error_messages(client):
 
 
 def test_contestant_not_found_with_negative_id(client):
-    r = client.post("/api/vote", json={"participantId": -1})
+    r = client.post("/vote", json={"participantId": -1})
     assert r.status_code in [400, 404]
 
 
 def test_contestant_not_found_with_large_id(client):
-    r = client.post("/api/vote", json={"participantId": 9999})
+    r = client.post("/vote", json={"participantId": 9999})
     assert r.status_code == 404
 
 
 def test_results_structure_validation(client):
-    r = client.get("/api/results")
+    r = client.get("/results")
     assert r.status_code == 200
     data = r.get_json()
 
@@ -158,7 +158,7 @@ def test_results_structure_validation(client):
 
 
 def test_participants_structure_validation(client):
-    r = client.get("/api/participants")
+    r = client.get("/participants")
     assert r.status_code == 200
     data = r.get_json()
 
