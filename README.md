@@ -2,11 +2,12 @@
 
 Repositorio para subir las prácticas de la asignatura GPIO.
 
-## Requisitos
+## Depliegue en Local
 
+### Requisitos
 - Docker Desktop instalado y corriendo
 
-## Poner en marcha la primera vez
+### Poner en marcha la primera vez
 
 En la carpeta raíz del proyecto, ejecutar:
 
@@ -22,7 +23,7 @@ sudo docker compose build --no-cache
 sudo docker compose up -d
 ```
 
-## Acceder a la aplicación
+### Acceder a la aplicación
 
 | Recurso  | URL                            |
 | -------- | ------------------------------ |
@@ -42,3 +43,18 @@ docker-compose logs frontend
 ```bash
 docker compose down
 ```
+
+## Despliegue en AWS
+### Requisitos
+- Terraform instalado y conexión con la cuenta AWS
+
+### Poner en marcha la primera vez
+En la carpeta raíz del proyecto, ejecutar:
+- Terraform init
+- terraform apply -auto-approve
+
+### Acceder a la aplicación
+
+| Recurso  | URL                            |
+| -------- | ------------------------------ |
+| Web     | http://backend-web-alb-1833745434.us-east-1.elb.amazonaws.com/         |
