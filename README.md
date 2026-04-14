@@ -46,10 +46,13 @@ docker compose down
 
 ## Despliegue en AWS
 ### Requisitos
-- Terraform instalado y conexión con la cuenta AWS
+- Terraform instalado y conexión con la cuenta AWS (
 
 ### Poner en marcha la primera vez
 En la carpeta raíz del proyecto, ejecutar:
+- cd scripts
+- ./push-backend.sh
+- cd ../
 - Terraform init
 - terraform apply -auto-approve
 
