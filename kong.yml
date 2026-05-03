@@ -4,11 +4,16 @@ services:
   - name: backend-service
     url: http://backend:5000
     routes:
+      - name: backend-route-health
+        paths:
+          - /alive
+        strip_path: false
       - name: backend-route-participants
         paths:
           - /participants
         strip_path: false
         plugins:
+          - name: key-auth
           - name: acl
             config:
               allow:
@@ -18,6 +23,7 @@ services:
           - /
         strip_path: false
         plugins:
+          - name: key-auth
           - name: acl
             config:
               allow:
@@ -37,9 +43,6 @@ consumers:
       - group: testing
 
 plugins:
-  - name: key-auth
-    service: backend-service
-
   - name: file-log
     config:
       path: /dev/stdout

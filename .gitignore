@@ -3,3 +3,22 @@ __pycache__/
 .vscode/
 Python Backend/
 .DS_Store
+
+# Terraform local files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local AWS credentials and downloaded installers
+.aws/
+credentials
+config
+AWSCLIV2.pkg

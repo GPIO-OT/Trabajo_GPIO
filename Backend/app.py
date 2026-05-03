@@ -70,6 +70,11 @@ def conexion():
         )
 
 
+@app.route("/alive", methods=["GET"])
+def alive():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/login", methods=["POST"])
 @swag_from("swaggerDocs/login.yml")
 def login():

@@ -15,29 +15,193 @@ provider "aws" {
   region = var.aws_region
 }
 
-# ------------------------------------------------------------------------------
-# DATOS DE LA VPC POR DEFECTO
-# ------------------------------------------------------------------------------
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
 data "aws_caller_identity" "current" {}
+
+locals {
+  azs                = slice(data.aws_availability_zones.available.names, 0, 2)
+  public_subnet_ids  = [for subnet in aws_subnet.public : subnet.id]
+  private_subnet_ids = [for subnet in aws_subnet.private : subnet.id]
+  kong_declarative_config = jsonencode({
+    _format_version = "3.0"
+    services = [
+      {
+        name = "backend-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}"
+        routes = [
+          {
+            name       = "backend-route-health"
+            paths      = ["/alive"]
+            strip_path = false
+          },
+          {
+            name       = "backend-route-participants"
+            paths      = ["/participants"]
+            strip_path = false
+            plugins = [
+              { name = "key-auth" },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          },
+          {
+            name       = "backend-route"
+            paths      = ["/"]
+            strip_path = false
+            plugins = [
+              { name = "key-auth" },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend", "testing"]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+    consumers = [
+      {
+        username = "cliente-web"
+        keyauth_credentials = [
+          { key = "gpio-api-key-2026" }
+        ]
+        acls = [
+          { group = "frontend" }
+        ]
+      },
+      {
+        username = "cliente-test"
+        keyauth_credentials = [
+          { key = "gpio-test-key-2026" }
+        ]
+        acls = [
+          { group = "testing" }
+        ]
+      }
+    ]
+    plugins = [
+      {
+        name = "file-log"
+        config = {
+          path = "/dev/stdout"
+        }
+      }
+    ]
+  })
+}
+
+# ------------------------------------------------------------------------------
+# RED: VPC CON SUBREDES PUBLICAS Y PRIVADAS
+# ------------------------------------------------------------------------------
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  tags = { Name = "${var.project_name}-vpc" }
+}
+
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = { Name = "${var.project_name}-igw" }
+}
+
+resource "aws_subnet" "public" {
+  for_each = { for index, az in local.azs : az => index }
+
+  vpc_id                  = aws_vpc.main.id
+  availability_zone       = each.key
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, each.value + 1)
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.project_name}-public-${each.key}"
+    Tier = "public"
+  }
+}
+
+resource "aws_subnet" "private" {
+  for_each = { for index, az in local.azs : az => index }
+
+  vpc_id                  = aws_vpc.main.id
+  availability_zone       = each.key
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, each.value + 101)
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "${var.project_name}-private-${each.key}"
+    Tier = "private"
+  }
+}
+
+resource "aws_eip" "nat" {
+  domain = "vpc"
+
+  tags = { Name = "${var.project_name}-nat-eip" }
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = local.public_subnet_ids[0]
+
+  tags = { Name = "${var.project_name}-nat" }
+
+  depends_on = [aws_internet_gateway.main]
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = { Name = "${var.project_name}-public-rt" }
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+
+  tags = { Name = "${var.project_name}-private-rt" }
+}
+
+resource "aws_route_table_association" "public" {
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "private" {
+  for_each = aws_subnet.private
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.private.id
+}
 
 # ------------------------------------------------------------------------------
 # SEGURIDAD
 # ------------------------------------------------------------------------------
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
-  description = "SG for Application Load Balancer"
-  vpc_id      = data.aws_vpc.default.id
+  description = "SG for public Application Load Balancer"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     description = "HTTP from internet"
@@ -57,15 +221,15 @@ resource "aws_security_group" "alb" {
   tags = { Name = "${var.project_name}-alb-sg" }
 }
 
-resource "aws_security_group" "ecs" {
-  name        = "${var.project_name}-ecs-sg"
-  description = "SG for ECS tasks"
-  vpc_id      = data.aws_vpc.default.id
+resource "aws_security_group" "kong" {
+  name        = "${var.project_name}-kong-sg"
+  description = "SG for Kong API Gateway tasks"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "Traffic from ALB to backend port"
-    from_port       = var.backend_container_port
-    to_port         = var.backend_container_port
+    description     = "Traffic from ALB to Kong proxy"
+    from_port       = var.kong_proxy_port
+    to_port         = var.kong_proxy_port
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
@@ -77,30 +241,100 @@ resource "aws_security_group" "ecs" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "${var.project_name}-ecs-sg" }
+  tags = { Name = "${var.project_name}-kong-sg" }
+}
+
+resource "aws_security_group" "backend" {
+  name        = "${var.project_name}-backend-sg"
+  description = "SG for private backend tasks"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Traffic from internal backend ALB"
+    from_port       = var.backend_container_port
+    to_port         = var.backend_container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.backend_alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${var.project_name}-backend-sg" }
+}
+
+resource "aws_security_group" "backend_alb" {
+  name        = "${var.project_name}-backend-alb-sg"
+  description = "SG for private backend Application Load Balancer"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Traffic from Kong to private backend ALB"
+    from_port       = var.backend_container_port
+    to_port         = var.backend_container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.kong.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${var.project_name}-backend-alb-sg" }
+}
+
+resource "aws_security_group" "ecs_instances" {
+  name        = "${var.project_name}-ecs-instances-sg"
+  description = "SG for ECS EC2 container instances"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${var.project_name}-ecs-instances-sg" }
 }
 
 resource "aws_security_group" "rds" {
   name        = "${var.project_name}-rds-sg"
   description = "SG for MySQL database"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "MySQL from ECS tasks"
+    description     = "MySQL from backend tasks"
     from_port       = 3306
     to_port         = 3306
     protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
+    security_groups = [aws_security_group.backend.id]
   }
 
   tags = { Name = "${var.project_name}-rds-sg" }
 }
 
 # ------------------------------------------------------------------------------
-# ECR REPOSITORY (para la imagen del backend)
+# ECR REPOSITORIES
 # ------------------------------------------------------------------------------
 resource "aws_ecr_repository" "backend" {
-  name = "${var.project_name}-backend"
+  name                 = "${var.project_name}-backend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_repository" "kong" {
+  name                 = "${var.project_name}-kong"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -109,11 +343,11 @@ resource "aws_ecr_repository" "backend" {
 }
 
 # ------------------------------------------------------------------------------
-# RDS MySQL (base de datos) - sin secrets manager
+# RDS MYSQL EN SUBREDES PRIVADAS
 # ------------------------------------------------------------------------------
 resource "aws_db_subnet_group" "default" {
   name       = "${var.project_name}-db-subnet-group"
-  subnet_ids = data.aws_subnets.default.ids
+  subnet_ids = local.private_subnet_ids
 }
 
 resource "random_password" "db_password" {
@@ -122,24 +356,24 @@ resource "random_password" "db_password" {
 }
 
 resource "aws_db_instance" "mysql" {
-  identifier             = "${var.project_name}-db"
-  engine                 = "mysql"
-  engine_version         = "8.0"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 20
-  storage_type           = "gp2"
-  storage_encrypted      = false
-  db_name                = var.db_name
-  username               = var.db_username
-  password               = random_password.db_password.result
-  parameter_group_name   = "default.mysql8.0"
-  skip_final_snapshot    = true
-  publicly_accessible    = false
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  db_subnet_group_name   = aws_db_subnet_group.default.name
+  identifier              = "${var.project_name}-db"
+  engine                  = "mysql"
+  engine_version          = "8.0"
+  instance_class          = "db.t3.micro"
+  allocated_storage       = 20
+  storage_type            = "gp2"
+  storage_encrypted       = false
+  db_name                 = var.db_name
+  username                = var.db_username
+  password                = random_password.db_password.result
+  parameter_group_name    = "default.mysql8.0"
+  skip_final_snapshot     = true
+  publicly_accessible     = false
+  vpc_security_group_ids  = [aws_security_group.rds.id]
+  db_subnet_group_name    = aws_db_subnet_group.default.name
   backup_retention_period = 7
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "Mon:04:00-Mon:05:00"
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "Mon:04:00-Mon:05:00"
 
   tags = {
     Name = "${var.project_name}-mysql"
@@ -147,7 +381,7 @@ resource "aws_db_instance" "mysql" {
 }
 
 # ------------------------------------------------------------------------------
-# ECS CLUSTER Y AUTO SCALING GROUP (basado en EC2)
+# ECS CLUSTER Y AUTO SCALING GROUP
 # ------------------------------------------------------------------------------
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
@@ -169,10 +403,10 @@ resource "aws_launch_template" "ecs" {
   key_name      = null
 
   iam_instance_profile {
-    name = "LabInstanceProfile"   # Usamos el perfil existente en el laboratorio
+    name = "LabInstanceProfile"
   }
 
-  vpc_security_group_ids = [aws_security_group.ecs.id]
+  vpc_security_group_ids = [aws_security_group.ecs_instances.id]
 
   block_device_mappings {
     device_name = "/dev/xvda"
@@ -185,7 +419,8 @@ resource "aws_launch_template" "ecs" {
   user_data = base64encode(<<-EOF
     #!/bin/bash
     echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
-    start ecs
+    systemctl enable ecs
+    systemctl start ecs
   EOF
   )
 
@@ -198,11 +433,11 @@ resource "aws_launch_template" "ecs" {
 }
 
 resource "aws_autoscaling_group" "ecs" {
-  name               = "${var.project_name}-asg"
-  vpc_zone_identifier = data.aws_subnets.default.ids
-  desired_capacity   = 1
-  min_size           = 1
-  max_size           = 1
+  name                = "${var.project_name}-asg"
+  vpc_zone_identifier = local.private_subnet_ids
+  desired_capacity    = 2
+  min_size            = 2
+  max_size            = 2
 
   launch_template {
     id      = aws_launch_template.ecs.id
@@ -240,21 +475,21 @@ resource "aws_ecs_cluster_capacity_providers" "main" {
 }
 
 # ------------------------------------------------------------------------------
-# TASK DEFINITION (backend) - usando LabRole
+# TASK DEFINITIONS
 # ------------------------------------------------------------------------------
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.project_name}-backend"
   network_mode             = "awsvpc"
   requires_compatibilities = ["EC2"]
-  cpu                      = "512"
-  memory                   = "512"
+  cpu                      = "256"
+  memory                   = "384"
   execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
   task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
 
   container_definitions = jsonencode([
     {
-      name  = "backend"
-      image = "${aws_ecr_repository.backend.repository_url}:${var.backend_image_tag}"
+      name      = "backend"
+      image     = "${aws_ecr_repository.backend.repository_url}:${var.backend_image_tag}"
       essential = true
       portMappings = [
         {
@@ -281,29 +516,77 @@ resource "aws_ecs_task_definition" "backend" {
   ])
 }
 
+resource "aws_ecs_task_definition" "kong" {
+  family                   = "${var.project_name}-kong"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["EC2"]
+  cpu                      = "256"
+  memory                   = "384"
+  execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+
+  container_definitions = jsonencode([
+    {
+      name      = "kong"
+      image     = "${aws_ecr_repository.kong.repository_url}:${var.kong_image_tag}"
+      essential = true
+      portMappings = [
+        {
+          containerPort = var.kong_proxy_port
+          hostPort      = var.kong_proxy_port
+          protocol      = "tcp"
+        }
+      ]
+      environment = [
+        { name = "KONG_DATABASE", value = "off" },
+        { name = "KONG_DECLARATIVE_CONFIG_STRING", value = local.kong_declarative_config },
+        { name = "KONG_LOG_LEVEL", value = "info" },
+        { name = "KONG_PROXY_ACCESS_LOG", value = "/dev/stdout" },
+        { name = "KONG_ADMIN_ACCESS_LOG", value = "/dev/stdout" },
+        { name = "KONG_PROXY_ERROR_LOG", value = "/dev/stderr" },
+        { name = "KONG_ADMIN_ERROR_LOG", value = "/dev/stderr" },
+        { name = "KONG_ADMIN_LISTEN", value = "127.0.0.1:8001" }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/${var.project_name}-kong"
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+}
+
 resource "aws_cloudwatch_log_group" "backend" {
-  name = "/ecs/${var.project_name}-backend"
+  name              = "/ecs/${var.project_name}-backend"
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "kong" {
+  name              = "/ecs/${var.project_name}-kong"
   retention_in_days = 30
 }
 
 # ------------------------------------------------------------------------------
-# LOAD BALANCER (ALB)
+# LOAD BALANCER PUBLICO: INTERNET -> KONG
 # ------------------------------------------------------------------------------
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = data.aws_subnets.default.ids
+  subnets            = local.public_subnet_ids
 
   enable_deletion_protection = false
 }
 
-resource "aws_lb_target_group" "backend" {
-  name        = "${var.project_name}-tg"
-  port        = var.backend_container_port
+resource "aws_lb_target_group" "kong" {
+  name        = "${var.project_name}-kong-tg"
+  port        = var.kong_proxy_port
   protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
@@ -316,7 +599,48 @@ resource "aws_lb_target_group" "backend" {
     port                = "traffic-port"
   }
 
-  tags = { Name = "${var.project_name}-tg" }
+  tags = { Name = "${var.project_name}-kong-tg" }
+}
+
+resource "aws_lb" "backend_internal" {
+  name               = "${var.project_name}-backend-alb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.backend_alb.id]
+  subnets            = local.private_subnet_ids
+
+  enable_deletion_protection = false
+}
+
+resource "aws_lb_target_group" "backend" {
+  name        = "${var.project_name}-backend-tg"
+  port        = var.backend_container_port
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = var.backend_health_check_path
+    port                = "traffic-port"
+  }
+
+  tags = { Name = "${var.project_name}-backend-tg" }
+}
+
+resource "aws_lb_listener" "backend_internal" {
+  load_balancer_arn = aws_lb.backend_internal.arn
+  port              = var.backend_container_port
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
 }
 
 resource "aws_lb_listener" "http" {
@@ -326,26 +650,26 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
+    target_group_arn = aws_lb_target_group.kong.arn
   }
 }
 
 # ------------------------------------------------------------------------------
-# SERVICIO ECS
+# SERVICIOS ECS SEPARADOS
 # ------------------------------------------------------------------------------
 resource "aws_ecs_service" "backend" {
-  name            = "${var.project_name}-service"
+  name            = "${var.project_name}-backend-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.backend.arn
   desired_count   = 1
   launch_type     = "EC2"
 
-  health_check_grace_period_seconds = 30
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
 
   network_configuration {
-    subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs.id]
-    # assign_public_ip = true
+    subnets         = local.private_subnet_ids
+    security_groups = [aws_security_group.backend.id]
   }
 
   load_balancer {
@@ -355,6 +679,37 @@ resource "aws_ecs_service" "backend" {
   }
 
   depends_on = [
+    aws_ecs_cluster_capacity_providers.main,
+    aws_db_instance.mysql,
+    aws_lb_listener.backend_internal
+  ]
+}
+
+resource "aws_ecs_service" "kong" {
+  name            = "${var.project_name}-kong-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.kong.arn
+  desired_count   = 1
+  launch_type     = "EC2"
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
+  health_check_grace_period_seconds = 30
+
+  network_configuration {
+    subnets         = local.public_subnet_ids
+    security_groups = [aws_security_group.kong.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.kong.arn
+    container_name   = "kong"
+    container_port   = var.kong_proxy_port
+  }
+
+  depends_on = [
+    aws_ecs_service.backend,
     aws_lb_listener.http,
     aws_ecs_cluster_capacity_providers.main
   ]
