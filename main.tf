@@ -52,6 +52,48 @@ locals {
             ]
           },
           {
+            name       = "backend-route-results"
+            paths      = ["/results"]
+            strip_path = false
+            plugins = [
+              { name = "key-auth" },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          },
+          {
+            name       = "backend-route-vote"
+            paths      = ["/vote"]
+            strip_path = false
+            plugins = [
+              { name = "key-auth" },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          },
+          {
+            name       = "backend-route-login"
+            paths      = ["/login"]
+            strip_path = false
+            plugins = [
+              { name = "key-auth" },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend", "testing"]
+                }
+              }
+            ]
+          },
+          {
             name       = "backend-route"
             paths      = ["/"]
             strip_path = false
