@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { LoginRequest, AuthResponse } from "../types/Auth"
+import { apiHeaders, apiUrl } from "../api"
 
 export const useFecthLogin = () => {
   const [loading, setLoading] = useState(false)
@@ -10,11 +11,11 @@ export const useFecthLogin = () => {
     setError(null)
 
     try {
-      const res = await fetch("http://localhost:5001/api/login", {
+      const res = await fetch(apiUrl("/login"), {
         method: "POST",
-        headers: {
+        headers: apiHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify(credentials),
       })
 

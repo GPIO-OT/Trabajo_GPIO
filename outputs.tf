@@ -19,6 +19,11 @@ output "kong_ecr_repository_url" {
   value       = aws_ecr_repository.kong.repository_url
 }
 
+output "frontend_ecr_repository_url" {
+  description = "URL del repositorio ECR para subir la imagen del frontend"
+  value       = aws_ecr_repository.frontend.repository_url
+}
+
 output "backend_private_dns_name" {
   description = "DNS privado del balanceador interno del backend"
   value       = aws_lb.backend_internal.dns_name

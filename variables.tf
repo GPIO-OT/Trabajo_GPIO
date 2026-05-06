@@ -22,6 +22,12 @@ variable "kong_image_tag" {
   default     = "latest"
 }
 
+variable "frontend_image_tag" {
+  description = "Tag de la imagen del frontend en ECR"
+  type        = string
+  default     = "latest"
+}
+
 variable "vpc_cidr" {
   description = "CIDR principal de la VPC"
   type        = string
@@ -64,4 +70,10 @@ variable "kong_proxy_port" {
   description = "Puerto proxy HTTP de Kong"
   type        = number
   default     = 8000
+}
+
+variable "frontend_container_port" {
+  description = "Puerto interno del contenedor frontend"
+  type        = number
+  default     = 80
 }

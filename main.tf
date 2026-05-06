@@ -29,6 +29,117 @@ locals {
     _format_version = "3.0"
     services = [
       {
+        name = "backend-gateway-health-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}/alive"
+        routes = [
+          {
+            name       = "backend-gateway-health"
+            paths      = ["/gateway/alive"]
+            strip_path = true
+          }
+        ]
+      },
+      {
+        name = "backend-gateway-participants-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}/participants"
+        routes = [
+          {
+            name       = "backend-gateway-participants"
+            paths      = ["/gateway/participants"]
+            strip_path = true
+            plugins = [
+              {
+                name = "key-auth"
+                config = {
+                  key_names = ["x-api-key", "apikey"]
+                }
+              },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name = "backend-gateway-results-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}/results"
+        routes = [
+          {
+            name       = "backend-gateway-results"
+            paths      = ["/gateway/results"]
+            strip_path = true
+            plugins = [
+              {
+                name = "key-auth"
+                config = {
+                  key_names = ["x-api-key", "apikey"]
+                }
+              },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name = "backend-gateway-vote-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}/vote"
+        routes = [
+          {
+            name       = "backend-gateway-vote"
+            paths      = ["/gateway/vote"]
+            strip_path = true
+            plugins = [
+              {
+                name = "key-auth"
+                config = {
+                  key_names = ["x-api-key", "apikey"]
+                }
+              },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name = "backend-gateway-login-service"
+        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}/login"
+        routes = [
+          {
+            name       = "backend-gateway-login"
+            paths      = ["/gateway/login"]
+            strip_path = true
+            plugins = [
+              {
+                name = "key-auth"
+                config = {
+                  key_names = ["x-api-key", "apikey"]
+                }
+              },
+              {
+                name = "acl"
+                config = {
+                  allow = ["frontend", "testing"]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
         name = "backend-service"
         url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}"
         routes = [
@@ -286,6 +397,29 @@ resource "aws_security_group" "kong" {
   tags = { Name = "${var.project_name}-kong-sg" }
 }
 
+resource "aws_security_group" "frontend" {
+  name        = "${var.project_name}-frontend-sg"
+  description = "SG for frontend tasks"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "Traffic from ALB to frontend"
+    from_port       = var.frontend_container_port
+    to_port         = var.frontend_container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "${var.project_name}-frontend-sg" }
+}
+
 resource "aws_security_group" "backend" {
   name        = "${var.project_name}-backend-sg"
   description = "SG for private backend tasks"
@@ -320,6 +454,14 @@ resource "aws_security_group" "backend_alb" {
     to_port         = var.backend_container_port
     protocol        = "tcp"
     security_groups = [aws_security_group.kong.id]
+  }
+
+  ingress {
+    description     = "Traffic from frontend service to private backend ALB"
+    from_port       = var.backend_container_port
+    to_port         = var.backend_container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.frontend.id]
   }
 
   egress {
@@ -369,6 +511,7 @@ resource "aws_security_group" "rds" {
 resource "aws_ecr_repository" "backend" {
   name                 = "${var.project_name}-backend"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -378,6 +521,17 @@ resource "aws_ecr_repository" "backend" {
 resource "aws_ecr_repository" "kong" {
   name                 = "${var.project_name}-kong"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_repository" "frontend" {
+  name                 = "${var.project_name}-frontend"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -462,7 +616,7 @@ resource "aws_launch_template" "ecs" {
     #!/bin/bash
     echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
     systemctl enable ecs
-    systemctl start ecs
+    systemctl --no-block start ecs
   EOF
   )
 
@@ -477,9 +631,9 @@ resource "aws_launch_template" "ecs" {
 resource "aws_autoscaling_group" "ecs" {
   name                = "${var.project_name}-asg"
   vpc_zone_identifier = local.private_subnet_ids
-  desired_capacity    = 2
-  min_size            = 2
-  max_size            = 2
+  desired_capacity    = 3
+  min_size            = 3
+  max_size            = 3
 
   launch_template {
     id      = aws_launch_template.ecs.id
@@ -563,7 +717,7 @@ resource "aws_ecs_task_definition" "kong" {
   network_mode             = "awsvpc"
   requires_compatibilities = ["EC2"]
   cpu                      = "256"
-  memory                   = "384"
+  memory                   = "768"
   execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
   task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
 
@@ -601,6 +755,45 @@ resource "aws_ecs_task_definition" "kong" {
   ])
 }
 
+resource "aws_ecs_task_definition" "frontend" {
+  family                   = "${var.project_name}-frontend"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["EC2"]
+  cpu                      = "256"
+  memory                   = "256"
+  execution_role_arn       = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  task_role_arn            = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+
+  container_definitions = jsonencode([
+    {
+      name      = "frontend"
+      image     = "${aws_ecr_repository.frontend.repository_url}:${var.frontend_image_tag}"
+      essential = true
+      portMappings = [
+        {
+          containerPort = var.frontend_container_port
+          hostPort      = var.frontend_container_port
+          protocol      = "tcp"
+        }
+      ]
+      environment = [
+        {
+          name  = "BACKEND_INTERNAL_URL"
+          value = "${aws_lb.backend_internal.dns_name}:${var.backend_container_port}"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/${var.project_name}-frontend"
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+}
+
 resource "aws_cloudwatch_log_group" "backend" {
   name              = "/ecs/${var.project_name}-backend"
   retention_in_days = 30
@@ -611,8 +804,13 @@ resource "aws_cloudwatch_log_group" "kong" {
   retention_in_days = 30
 }
 
+resource "aws_cloudwatch_log_group" "frontend" {
+  name              = "/ecs/${var.project_name}-frontend"
+  retention_in_days = 30
+}
+
 # ------------------------------------------------------------------------------
-# LOAD BALANCER PUBLICO: INTERNET -> KONG
+# LOAD BALANCER PUBLICO: INTERNET -> FRONTEND Y /gateway -> KONG
 # ------------------------------------------------------------------------------
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -625,11 +823,12 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "kong" {
-  name        = "${var.project_name}-kong-tg"
-  port        = var.kong_proxy_port
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${var.project_name}-kong-tg"
+  port                 = var.kong_proxy_port
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 10
 
   health_check {
     enabled             = true
@@ -644,6 +843,27 @@ resource "aws_lb_target_group" "kong" {
   tags = { Name = "${var.project_name}-kong-tg" }
 }
 
+resource "aws_lb_target_group" "frontend" {
+  name                 = "${var.project_name}-frontend-tg"
+  port                 = var.frontend_container_port
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 10
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = "/"
+    port                = "traffic-port"
+  }
+
+  tags = { Name = "${var.project_name}-frontend-tg" }
+}
+
 resource "aws_lb" "backend_internal" {
   name               = "${var.project_name}-backend-alb"
   internal           = true
@@ -655,11 +875,12 @@ resource "aws_lb" "backend_internal" {
 }
 
 resource "aws_lb_target_group" "backend" {
-  name        = "${var.project_name}-backend-tg"
-  port        = var.backend_container_port
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  name                 = "${var.project_name}-backend-tg"
+  port                 = var.backend_container_port
+  protocol             = "HTTP"
+  vpc_id               = aws_vpc.main.id
+  target_type          = "ip"
+  deregistration_delay = 10
 
   health_check {
     enabled             = true
@@ -692,7 +913,23 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "gateway_to_kong" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 20
+
+  action {
+    type             = "forward"
     target_group_arn = aws_lb_target_group.kong.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/gateway", "/gateway/*", "/alive"]
+    }
   }
 }
 
@@ -752,6 +989,36 @@ resource "aws_ecs_service" "kong" {
 
   depends_on = [
     aws_ecs_service.backend,
+    aws_lb_listener_rule.gateway_to_kong,
+    aws_lb_listener.http,
+    aws_ecs_cluster_capacity_providers.main
+  ]
+}
+
+resource "aws_ecs_service" "frontend" {
+  name            = "${var.project_name}-frontend-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.frontend.arn
+  desired_count   = 1
+  launch_type     = "EC2"
+
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
+  health_check_grace_period_seconds = 30
+
+  network_configuration {
+    subnets         = local.private_subnet_ids
+    security_groups = [aws_security_group.frontend.id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.frontend.arn
+    container_name   = "frontend"
+    container_port   = var.frontend_container_port
+  }
+
+  depends_on = [
     aws_lb_listener.http,
     aws_ecs_cluster_capacity_providers.main
   ]

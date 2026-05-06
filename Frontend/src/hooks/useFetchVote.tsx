@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { VoteInfo, RegisteredVoteInfo } from "../types/Votes"
+import { apiHeaders, apiUrl } from "../api"
 
 export const useFecthVote = () => {
   const [loading, setLoading] = useState(false)
@@ -10,11 +11,11 @@ export const useFecthVote = () => {
     setError(null)
 
     try {
-      const res = await fetch("http://localhost:5001/api/vote", {
+      const res = await fetch(apiUrl("/vote"), {
         method: "POST",
-        headers: {
+        headers: apiHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify(vote),
       })
 
