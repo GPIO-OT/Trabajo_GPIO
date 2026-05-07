@@ -10,29 +10,9 @@ Repositorio para subir las prácticas de la asignatura GPIO.
 
 ## Pasos a seguir:
 
-En la carpeta raíz del proyecto ejecutamos:
+En la carpeta raíz del proyecto ejecutamos el script de despliegue:
 ```bash
-terraform init
-```
-
-Creamos los repositorios ECR:
-```bash
-terraform apply \
-  -target=aws_ecr_repository.backend \
-  -target=aws_ecr_repository.kong \
-  -target=aws_ecr_repository.frontend
-```
-
-Subimos las imágenes Docker:
-```bash
-./scripts/push-backend.sh
-./scripts/push-kong.sh
-./scripts/push-frontend.sh
-```
-
-Desplegamos la infraestructura:
-```bash
-terraform apply
+./scripts/deploy-all.sh                    
 ```
 
 En enlace lo obtenemos en la salida de este comando:
@@ -44,7 +24,10 @@ Esperamos unos segundos y ya podremos acceder a la web:
 - Frontend: http://url
 - API Gateway: http://url/gateway -> Hay que pasarle el API Key (probar con curl).
 
-
+Si queremos borrar el despliegue para que no consuma recursos, ejecutamos el script de borrado:
+```bash
+./scripts/destroy-all.sh                 
+```
 
 ## Depliegue en Local
 
