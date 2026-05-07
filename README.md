@@ -21,8 +21,12 @@ terraform output alb_dns_name
 ```
 
 Esperamos unos segundos y ya podremos acceder a la web:
-- Frontend: http://url
+- Frontend: 
 - API Gateway: http://url/gateway -> Hay que pasarle el API Key (probar con curl).
+- | Recurso  | URL                            |
+| -------- | ------------------------------ |
+| Web     | http://url.com/         |
+| Gateway | http://url/gateway/ruta |
 
 Si queremos borrar el despliegue para que no consuma recursos, ejecutamos el script de borrado:
 ```bash
@@ -71,20 +75,6 @@ docker-compose logs frontend
 docker compose down
 ```
 
-## Despliegue en AWS
-### Requisitos
-- Terraform instalado y conexión con la cuenta AWS (
 
-### Poner en marcha la primera vez
-En la carpeta raíz del proyecto, ejecutar:
-- cd scripts
-- ./push-backend.sh
-- cd ../
-- Terraform init
-- terraform apply -auto-approve
 
-### Acceder a la aplicación
 
-| Recurso  | URL                            |
-| -------- | ------------------------------ |
-| Web     | http://backend-web-alb-1833745434.us-east-1.elb.amazonaws.com/         |
