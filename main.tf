@@ -138,87 +138,6 @@ locals {
             ]
           }
         ]
-      },
-      {
-        name = "backend-service"
-        url  = "http://${aws_lb.backend_internal.dns_name}:${var.backend_container_port}"
-        routes = [
-          {
-            name       = "backend-route-health"
-            paths      = ["/alive"]
-            strip_path = false
-          },
-          {
-            name       = "backend-route-participants"
-            paths      = ["/participants"]
-            strip_path = false
-            plugins = [
-              { name = "key-auth" },
-              {
-                name = "acl"
-                config = {
-                  allow = ["frontend"]
-                }
-              }
-            ]
-          },
-          {
-            name       = "backend-route-results"
-            paths      = ["/results"]
-            strip_path = false
-            plugins = [
-              { name = "key-auth" },
-              {
-                name = "acl"
-                config = {
-                  allow = ["frontend"]
-                }
-              }
-            ]
-          },
-          {
-            name       = "backend-route-vote"
-            paths      = ["/vote"]
-            strip_path = false
-            plugins = [
-              { name = "key-auth" },
-              {
-                name = "acl"
-                config = {
-                  allow = ["frontend"]
-                }
-              }
-            ]
-          },
-          {
-            name       = "backend-route-login"
-            paths      = ["/login"]
-            strip_path = false
-            plugins = [
-              { name = "key-auth" },
-              {
-                name = "acl"
-                config = {
-                  allow = ["frontend", "testing"]
-                }
-              }
-            ]
-          },
-          {
-            name       = "backend-route"
-            paths      = ["/"]
-            strip_path = false
-            plugins = [
-              { name = "key-auth" },
-              {
-                name = "acl"
-                config = {
-                  allow = ["frontend", "testing"]
-                }
-              }
-            ]
-          }
-        ]
       }
     ]
     consumers = [
@@ -836,7 +755,7 @@ resource "aws_lb_target_group" "kong" {
     unhealthy_threshold = 2
     timeout             = 5
     interval            = 30
-    path                = var.backend_health_check_path
+    path                = "/gateway/alive"
     port                = "traffic-port"
   }
 
@@ -928,7 +847,7 @@ resource "aws_lb_listener_rule" "gateway_to_kong" {
 
   condition {
     path_pattern {
-      values = ["/gateway", "/gateway/*", "/alive"]
+      values = ["/gateway", "/gateway/*"]
     }
   }
 }
