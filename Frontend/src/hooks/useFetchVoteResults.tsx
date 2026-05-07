@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { VoteResult } from "../types/VoteResults"
+import { apiHeaders, apiUrl } from "../api"
 
 export const useFetchVoteResults = () => {
   const [data, setData] = useState<VoteResult[]>([])
@@ -9,7 +10,9 @@ export const useFetchVoteResults = () => {
   useEffect(() => {
     const fetchVoteResults = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/results")
+        const res = await fetch(apiUrl("/results"), {
+          headers: apiHeaders(),
+        })
 
         if (!res.ok) {
           throw new Error("Error al obtener Resultado de Votos")

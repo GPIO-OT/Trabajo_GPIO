@@ -16,6 +16,24 @@ variable "backend_image_tag" {
   default     = "latest"
 }
 
+variable "kong_image_tag" {
+  description = "Tag de la imagen de Kong en ECR"
+  type        = string
+  default     = "latest"
+}
+
+variable "frontend_image_tag" {
+  description = "Tag de la imagen del frontend en ECR"
+  type        = string
+  default     = "latest"
+}
+
+variable "vpc_cidr" {
+  description = "CIDR principal de la VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
 variable "db_name" {
   description = "Nombre de la base de datos"
   type        = string
@@ -39,11 +57,23 @@ variable "db_password" {
 variable "backend_health_check_path" {
   description = "Ruta para health check del backend"
   type        = string
-  default     = "/alive"   # cámbiala si tu backend usa /alive u otra
+  default     = "/alive" # cámbiala si tu backend usa /alive u otra
 }
 
 variable "backend_container_port" {
   description = "Puerto interno del contenedor backend"
   type        = number
   default     = 5000
+}
+
+variable "kong_proxy_port" {
+  description = "Puerto proxy HTTP de Kong"
+  type        = number
+  default     = 8000
+}
+
+variable "frontend_container_port" {
+  description = "Puerto interno del contenedor frontend"
+  type        = number
+  default     = 80
 }
