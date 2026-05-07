@@ -1,0 +1,49 @@
+name: CD - Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build, Push & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Push backend image
+        run: bash scripts/push-backend.sh
+
+      - name: Push frontend image
+        run: bash scripts/push-frontend.sh
+
+      - name: Push kong image
+        run: bash scripts/push-kong.sh
+
+      - name: Force ECS services to redeploy
+        run: |
+          aws ecs update-service --cluster backend-web-cluster --service backend-web-backend-service --force-new-deployment --region us-east-1
+          aws ecs update-service --cluster backend-web-cluster --service backend-web-kong-service --force-new-deployment --region us-east-1
+          aws ecs update-service --cluster backend-web-cluster --service backend-web-frontend-service --force-new-deployment --region us-east-1
+
+      - name: Wait for services to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster backend-web-cluster \
+            --services backend-web-backend-service backend-web-kong-service backend-web-frontend-service \
+            --region us-east-1

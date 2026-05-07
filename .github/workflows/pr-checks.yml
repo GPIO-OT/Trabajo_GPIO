@@ -1,13 +1,12 @@
-name: Unit Tests
+name: CI - PR to develop
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [develop]
 
 jobs:
-  test:
+  ci:
+    name: Format & Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +21,10 @@ jobs:
         working-directory: Backend
         run: pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Black - format check
         working-directory: Backend
-        run: pytest test_app.py -v
+        run: black --check --diff .
+
+      - name: Unit tests
+        working-directory: Backend
+        run: pytest tests/test_unitarios.py -v

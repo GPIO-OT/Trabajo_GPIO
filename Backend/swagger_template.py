@@ -5,24 +5,17 @@ swagger_template = {
     "info": {
         "title": "BE TEST",
         "description": "API documentation for BE",
-        "version": "1.0.0"
+        "version": "1.0.0",
     },
     "basePath": "/",
-    "schemes": [
-        "http",
-        "https"
-    ],
+    "schemes": ["http", "https"],
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header",
-            "description": "Enter the token with the `Bearer: ` prefix, e.g. Bearer abcde12345."
+            "description": "Enter the token with the `Bearer: ` prefix, e.g. Bearer abcde12345.",
         }
     },
-    "security": [
-        {
-            "Bearer": []
-        }
-    ]
+    "security": [{"Bearer": []}],
 }

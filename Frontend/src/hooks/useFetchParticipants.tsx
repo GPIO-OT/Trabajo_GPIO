@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Participant } from "../types/Participants"
+import { apiHeaders, apiUrl } from "../api"
 
 export const useParticipants = () => {
   const [data, setData] = useState<Participant[]>([])
@@ -9,7 +10,9 @@ export const useParticipants = () => {
   useEffect(() => {
     const fetchParticipants = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/participants")
+        const res = await fetch(apiUrl("/participants"), {
+          headers: apiHeaders(),
+        })
 
         if (!res.ok) {
           throw new Error("Error al obtener participantes")

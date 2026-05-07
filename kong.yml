@@ -1,9 +1,101 @@
 _format_version: "3.0"
 
 services:
-  - name: backend-service
-    url: http://backend:5000
+  - name: backend-gateway-health-service
+    url: http://backend:5000/alive
     routes:
-      - name: backend-route
+      - name: backend-gateway-health
         paths:
-          - /api
+          - /gateway/alive
+        strip_path: true
+
+  - name: backend-gateway-participants-service
+    url: http://backend:5000/participants
+    routes:
+      - name: backend-gateway-participants
+        paths:
+          - /gateway/participants
+        strip_path: true
+        plugins:
+          - name: key-auth
+            config:
+              key_names:
+                - x-api-key
+                - apikey
+          - name: acl
+            config:
+              allow:
+                - frontend
+
+  - name: backend-gateway-results-service
+    url: http://backend:5000/results
+    routes:
+      - name: backend-gateway-results
+        paths:
+          - /gateway/results
+        strip_path: true
+        plugins:
+          - name: key-auth
+            config:
+              key_names:
+                - x-api-key
+                - apikey
+          - name: acl
+            config:
+              allow:
+                - frontend
+
+  - name: backend-gateway-vote-service
+    url: http://backend:5000/vote
+    routes:
+      - name: backend-gateway-vote
+        paths:
+          - /gateway/vote
+        strip_path: true
+        plugins:
+          - name: key-auth
+            config:
+              key_names:
+                - x-api-key
+                - apikey
+          - name: acl
+            config:
+              allow:
+                - frontend
+
+  - name: backend-gateway-login-service
+    url: http://backend:5000/login
+    routes:
+      - name: backend-gateway-login
+        paths:
+          - /gateway/login
+        strip_path: true
+        plugins:
+          - name: key-auth
+            config:
+              key_names:
+                - x-api-key
+                - apikey
+          - name: acl
+            config:
+              allow:
+                - frontend
+                - testing
+
+consumers:
+  - username: cliente-web
+    keyauth_credentials:
+      - key: gpio-api-key-2026
+    acls:
+      - group: frontend
+
+  - username: cliente-test
+    keyauth_credentials:
+      - key: gpio-test-key-2026
+    acls:
+      - group: testing
+
+plugins:
+  - name: file-log
+    config:
+      path: /dev/stdout
