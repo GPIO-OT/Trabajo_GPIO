@@ -41,8 +41,8 @@ terraform output alb_dns_name
 ```
 
 Esperamos unos segundos y ya podremos acceder a la web:
-- Frontend: http://backend-web-alb-412722026.us-east-1.elb.amazonaws.com/
-- API Gateway: http://backend-web-alb-412722026.us-east-1.elb.amazonaws.com/gateway/ -> Hay que pasarle el API Key (probar con curl).
+- Frontend: "http://url"
+- API Gateway: http://url/gateway -> Hay que pasarle el API Key (probar con curl).
 
 
 
