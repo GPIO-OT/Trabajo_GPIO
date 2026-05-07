@@ -21,12 +21,10 @@ terraform output alb_dns_name
 ```
 
 Esperamos unos segundos y ya podremos acceder a la web:
-- Frontend: 
-- API Gateway: http://url/gateway -> Hay que pasarle el API Key (probar con curl).
-| Recurso  | URL                            |
-| -------- | ------------------------------ |
-| Web     | http://url.com/         |
-| Gateway | http://url/gateway/ruta |
+| Recurso | URL                         |
+|----------|-----------------------------|
+| Web      | http://url.com/             |
+| Gateway  | http://url/gateway/ruta     |
 
 Si queremos borrar el despliegue para que no consuma recursos, ejecutamos el script de borrado:
 ```bash
