@@ -23,7 +23,7 @@ terraform output alb_dns_name
 Esperamos unos segundos y ya podremos acceder a la web:
 - Frontend: 
 - API Gateway: http://url/gateway -> Hay que pasarle el API Key (probar con curl).
-- | Recurso  | URL                            |
+| Recurso  | URL                            |
 | -------- | ------------------------------ |
 | Web     | http://url.com/         |
 | Gateway | http://url/gateway/ruta |
