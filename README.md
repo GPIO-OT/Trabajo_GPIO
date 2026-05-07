@@ -2,6 +2,50 @@
 
 Repositorio para subir las prácticas de la asignatura GPIO.
 
+## Despliegue en AWS con Terraform
+### Requisitos:
+- Tener instalado Terraform.
+- Tener instalado Docker
+- Tener cuenta de AWS y configurar las credenciales en ~/.aws/credentials.
+
+## Pasos a seguir:
+
+En la carpeta raíz del proyecto ejecutamos:
+```bash
+terraform init
+```
+
+Creamos los repositorios ECR:
+```bash
+terraform apply \
+  -target=aws_ecr_repository.backend \
+  -target=aws_ecr_repository.kong \
+  -target=aws_ecr_repository.frontend
+```
+
+Subimos las imágenes Docker:
+```bash
+./scripts/push-backend.sh
+./scripts/push-kong.sh
+./scripts/push-frontend.sh
+```
+
+Desplegamos la infraestructura:
+```bash
+terraform apply
+```
+
+En enlace lo obtenemos en la salida de este comando:
+```bash
+terraform output alb_dns_name
+```
+
+Esperamos unos segundos y ya podremos acceder a la web:
+- Frontend: http://backend-web-alb-412722026.us-east-1.elb.amazonaws.com/
+- API Gateway: http://backend-web-alb-412722026.us-east-1.elb.amazonaws.com/gateway/ -> Hay que pasarle el API Key (probar con curl).
+
+
+
 ## Depliegue en Local
 
 ### Requisitos
