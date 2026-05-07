@@ -2,11 +2,41 @@
 
 Repositorio para subir las prácticas de la asignatura GPIO.
 
-## Requisitos
+## Despliegue en AWS con Terraform
+### Requisitos:
+- Tener instalado Terraform.
+- Tener instalado Docker
+- Tener cuenta de AWS y configurar las credenciales en ~/.aws/credentials.
 
+## Pasos a seguir:
+
+En la carpeta raíz del proyecto ejecutamos el script de despliegue:
+```bash
+./scripts/deploy-all.sh                    
+```
+
+En enlace lo obtenemos en la salida de este comando:
+```bash
+terraform output alb_dns_name
+```
+
+Esperamos unos segundos y ya podremos acceder a la web:
+| Recurso | URL                         |
+|----------|-----------------------------|
+| Web      | http://url.com/             |
+| Gateway  | http://url/gateway/ruta     |
+
+Si queremos borrar el despliegue para que no consuma recursos, ejecutamos el script de borrado:
+```bash
+./scripts/destroy-all.sh                 
+```
+
+## Depliegue en Local
+
+### Requisitos
 - Docker Desktop instalado y corriendo
 
-## Poner en marcha la primera vez
+### Poner en marcha la primera vez
 
 En la carpeta raíz del proyecto, ejecutar:
 
@@ -22,7 +52,7 @@ sudo docker compose build --no-cache
 sudo docker compose up -d
 ```
 
-## Acceder a la aplicación
+### Acceder a la aplicación
 
 | Recurso  | URL                            |
 | -------- | ------------------------------ |
@@ -42,3 +72,7 @@ docker-compose logs frontend
 ```bash
 docker compose down
 ```
+
+
+
+
