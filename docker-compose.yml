@@ -42,6 +42,25 @@ services:
     depends_on:
       - backend
 
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: gpio-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      AWS_PROFILE: default
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_SHARED_CREDENTIALS_FILE: /etc/grafana/.aws/credentials
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./.aws:/etc/grafana/.aws:ro
+
+
+
   db:
     image: mysql:9.6.0
     environment:
@@ -59,3 +78,5 @@ services:
 
 volumes:
   mysql_data:
+
+  grafana_data:
