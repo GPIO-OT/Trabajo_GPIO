@@ -31,10 +31,19 @@ echo "==> Applying full infrastructure"
 terraform apply -auto-approve
 
 echo "==> Waiting for ECS services to stabilize"
-aws ecs wait services-stable \
+if ! aws ecs wait services-stable \
   --cluster backend-web-cluster \
   --services backend-web-backend-service backend-web-kong-service backend-web-frontend-service \
-  --region "$REGION"
+  --region "$REGION"; then
+  echo "==> ECS services did not stabilize. Recent service events:"
+  aws ecs describe-services \
+    --cluster backend-web-cluster \
+    --services backend-web-backend-service backend-web-kong-service backend-web-frontend-service \
+    --region "$REGION" \
+    --query 'services[].{service:serviceName,desired:desiredCount,running:runningCount,pending:pendingCount,events:events[0:5].message}' \
+    --output table
+  exit 1
+fi
 
 ALB_DNS="$(terraform output -raw alb_dns_name)"
 echo "==> Deployment ready"
