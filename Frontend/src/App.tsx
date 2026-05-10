@@ -1,6 +1,6 @@
 // src/App.tsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom"; // Asegúrate de importar Link
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom"; // Asegúrate de importar Link
 import Login from "./components/Login/Login";
 import Vote from "./components/Vote/Vote";
 import Results from "./components/Results/Results";
