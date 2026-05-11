@@ -217,16 +217,20 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
+  for_each = aws_subnet.public
+
   domain = "vpc"
 
-  tags = { Name = "${var.project_name}-nat-eip" }
+  tags = { Name = "${var.project_name}-nat-eip-${each.key}" }
 }
 
 resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = local.public_subnet_ids[0]
+  for_each = aws_subnet.public
 
-  tags = { Name = "${var.project_name}-nat" }
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id     = each.value.id
+
+  tags = { Name = "${var.project_name}-nat-${each.key}" }
 
   depends_on = [aws_internet_gateway.main]
 }
@@ -243,14 +247,16 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table" "private" {
+  for_each = aws_subnet.private
+
   vpc_id = aws_vpc.main.id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+    nat_gateway_id = aws_nat_gateway.main[each.key].id
   }
 
-  tags = { Name = "${var.project_name}-private-rt" }
+  tags = { Name = "${var.project_name}-private-rt-${each.key}" }
 }
 
 resource "aws_route_table_association" "public" {
@@ -264,7 +270,7 @@ resource "aws_route_table_association" "private" {
   for_each = aws_subnet.private
 
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[each.key].id
 }
 
 # ------------------------------------------------------------------------------
@@ -478,6 +484,7 @@ resource "aws_db_instance" "mysql" {
   allocated_storage       = 20
   storage_type            = "gp2"
   storage_encrypted       = false
+  multi_az                = true
   db_name                 = var.db_name
   username                = var.db_username
   password                = random_password.db_password.result
@@ -562,6 +569,12 @@ resource "aws_autoscaling_group" "ecs" {
   tag {
     key                 = "Name"
     value               = "${var.project_name}-ecs-instance"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = ""
     propagate_at_launch = true
   }
 }
