@@ -59,6 +59,10 @@ sudo docker compose up -d
 | API      | http://localhost:5001/         |
 | Swagger  | http://localhost:5001/swagger/ |
 | Frontend | http://localhost:5002/         |
+| Gateway  | http://localhost:8000/gateway/participants |
+| Kong     | http://localhost:8000/
+| Grafana  | http://localhost:3000/         |
+
 
 ## Consultar logs del Frontend y Backend
 
