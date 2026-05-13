@@ -54,10 +54,11 @@ services:
       AWS_REGION: us-east-1
       AWS_DEFAULT_REGION: us-east-1
       AWS_SHARED_CREDENTIALS_FILE: /etc/grafana/.aws/credentials
+      AWS_CONFIG_FILE: /etc/grafana/.aws/config
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./.aws:/etc/grafana/.aws:ro
+      - ${USERPROFILE}/.aws:/etc/grafana/.aws:ro
 
 
 
