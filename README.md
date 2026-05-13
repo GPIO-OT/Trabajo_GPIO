@@ -31,6 +31,18 @@ Si queremos borrar el despliegue para que no consuma recursos, ejecutamos el scr
 ./scripts/destroy-all.sh                 
 ```
 
+## Despliegue continuo con GitHub Actions
+
+El proyecto incluye un flujo de CD que se ejecuta automaticamente al hacer `push` sobre la rama `main`.
+
+Este flujo:
+- Construye las imagenes Docker de `backend`, `frontend` y `Kong`.
+- Publica las imagenes en Amazon ECR.
+- Fuerza un nuevo despliegue de los servicios en Amazon ECS.
+- Espera a que los servicios queden estables antes de finalizar.
+
+Importante: este flujo no ejecuta Terraform, por lo que solo actualiza la aplicacion desplegada y no modifica la infraestructura.
+
 ## Depliegue en Local
 
 ### Requisitos
@@ -72,7 +84,6 @@ docker-compose logs frontend
 ```bash
 docker compose down
 ```
-
 
 
 
